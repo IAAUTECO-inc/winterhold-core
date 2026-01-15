@@ -445,6 +445,10 @@ LENTRY(enter_kernel_el)
 	ldr	x3, =(CNTHCTL_EL1PCTEN_NOTRAP | CNTHCTL_EL1PCEN_NOTRAP)
 	ldr	x5, =(PSR_DAIF | PSR_M_EL1h)
 
+	/* Enable SPE at EL1 via Monitor Debug Configuration Register */
+	mov     x6, MDCR_EL2_E2PB_EL1_0_NO_TRAP
+	msr     mdcr_el2, x6
+
 .Ldone_vhe:
 
 	msr	cptr_el2, x2
@@ -993,7 +997,7 @@ LEND(link_l2_pagetable)
  * VA start (x8) modulo L3C_SIZE must equal PA start (x9) modulo L3C_SIZE.
  */
 LENTRY(build_l3_page_pagetable)
-	cbz	x10, 2f
+	cbz	x10, 4f
 	/*
 	 * Build the L3 table entry.
 	 */
@@ -1033,7 +1037,7 @@ LENTRY(build_l3_page_pagetable)
 	add	x11, x11, #1
 	add	x9, x9, #1
 	cbnz	x10, 1b
-2:
+4:
 
 	ret
 LEND(build_l3_page_pagetable)

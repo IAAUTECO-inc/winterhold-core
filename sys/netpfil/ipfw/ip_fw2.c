@@ -2120,8 +2120,8 @@ do {								\
 							pkey = &args->f_id.dst_ip6;
 						else
 							pkey = &args->f_id.src_ip6;
-					} else /* only for L3 */
-						break;
+					}
+					break;
 				case LOOKUP_DSCP:
 					if (is_ipv4)
 						key = ip->ip_tos >> 2;
@@ -3692,7 +3692,7 @@ vnet_ipfw_init(const void *unused)
 	rule->cmd[0].len = 1;
 	rule->cmd[0].opcode = default_to_accept ? O_ACCEPT : O_DENY;
 	chain->default_rule = rule;
-	ipfw_add_protected_rule(chain, rule, 0);
+	ipfw_add_protected_rule(chain, rule);
 
 	ipfw_eaction_init(chain, first);
 	ipfw_init_skipto_cache(chain);

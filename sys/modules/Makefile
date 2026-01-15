@@ -45,6 +45,7 @@ SUBDIR=	\
 	${_armv8_rng} \
 	${_asmc} \
 	ata \
+	${_aq} \
 	ath \
 	ath_dfs \
 	ath_hal \
@@ -348,6 +349,7 @@ SUBDIR=	\
 	${_rdrand_rng} \
 	${_rdseed_rng} \
 	re \
+	rge \
 	rl \
 	${_rockchip} \
 	rtsx \
@@ -383,6 +385,7 @@ SUBDIR=	\
 	smbfs \
 	snp \
 	sound \
+	${_spe} \
 	${_speaker} \
 	spi \
 	${_splash} \
@@ -548,6 +551,17 @@ SUBDIR+=	linux64
 SUBDIR+=	linux_common
 .endif
 
+# LinuxKPI based wireless drivers.
+.if ${MACHINE_CPUARCH} == "aarch64" || ${MACHINE_CPUARCH} == "amd64" || \
+    ${MACHINE_CPUARCH} == "i386" || ${MACHINE_CPUARCH} == "riscv"
+_iwlwifi=	iwlwifi
+_rtw88=		rtw88
+# rtw89 currently cannot be compiled without ACPI (seems also broken in Linux).
+.if ${KERN_OPTS:MDEV_ACPI}
+_rtw89=		rtw89
+.endif
+.endif
+
 .if ${MACHINE_CPUARCH} != "arm"
 .if ${MK_OFED} != "no" || defined(ALL_MODULES)
 _ibcore=	ibcore
@@ -576,15 +590,10 @@ _mlx5ib=	mlx5ib
 
 .if ${MACHINE_CPUARCH} == "aarch64" || ${MACHINE_CPUARCH} == "amd64" || \
     ${MACHINE_CPUARCH} == "i386"
+_acpi=		acpi
 _ena=		ena
 _gve=		gve
 _igc=		igc
-# gcc13 and earlier lack __builtin_bitcountg used by linux emulation
-.if !(${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} < 140000)
-_iwlwifi=	iwlwifi
-.endif
-_rtw88=		rtw88
-_rtw89=		rtw89
 _vmware=	vmware
 .endif
 
@@ -650,8 +659,7 @@ _rtwnfw=	rtwnfw
 .endif
 
 .if ${MK_SOURCELESS_UCODE} != "no" && ${MACHINE_CPUARCH} != "arm" && \
-	${MACHINE_ARCH} != "powerpc" && ${MACHINE_ARCH} != "powerpcspe" && \
-	${MACHINE_CPUARCH} != "riscv"
+	${MACHINE_ARCH} != "powerpc" && ${MACHINE_CPUARCH} != "riscv"
 _cxgbe=		cxgbe
 .endif
 
@@ -666,7 +674,7 @@ _genet=		genet
 .endif
 
 .if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "aarch64" || \
-	${MACHINE_ARCH:Mpowerpc64*}
+	${MACHINE_ARCH:Mpowerpc64*} != ""
 _ice=		ice
 .if ${MK_SOURCELESS_UCODE} != "no"
 _ice_ddp=	ice_ddp
@@ -676,6 +684,11 @@ _ice_ddp=	ice_ddp
 _irdma=		irdma
 .endif
 .endif
+_ixl=		ixl
+.endif
+
+.if ${MACHINE_CPUARCH} == "aarch64"
+_spe=		spe
 .endif
 
 .if ${MACHINE_CPUARCH} == "aarch64" || ${MACHINE_CPUARCH} == "arm" || \
@@ -688,7 +701,7 @@ _sdhci_fdt=	sdhci_fdt
 .endif
 
 # These rely on 64bit atomics
-.if ${MACHINE_ARCH} != "powerpc" && ${MACHINE_ARCH} != "powerpcspe"
+.if ${MACHINE_ARCH} != "powerpc"
 _mps=		mps
 _mpr=		mpr
 .endif
@@ -728,6 +741,7 @@ _imx=		imx
 .endif
 
 .if ${MACHINE_CPUARCH} == "i386" || ${MACHINE_CPUARCH} == "amd64"
+_aq=		aq
 _agp=		agp
 .if ${MACHINE_CPUARCH} == "i386" || !empty(COMPAT_FREEBSD32_ENABLED)
 _aout=		aout
@@ -771,7 +785,6 @@ _wdatwd=	wdatwd
 
 _aac=		aac
 _aacraid=	aacraid
-_acpi=		acpi
 .if ${MK_CRYPT} != "no" || defined(ALL_MODULES)
 _aesni=		aesni
 .endif
@@ -781,7 +794,6 @@ _amdsbwd=	amdsbwd
 _amdsmn=	amdsmn
 _amdtemp=	amdtemp
 _arcmsr=	arcmsr
-_asmc=		asmc
 .if ${MK_CRYPT} != "no" || defined(ALL_MODULES)
 _blake2=	blake2
 .endif
@@ -840,6 +852,7 @@ _x86bios=	x86bios
 
 .if ${MACHINE_CPUARCH} == "amd64"
 _amdgpio=	amdgpio
+_asmc=		asmc
 _ccp=		ccp
 _enic=		enic
 _iavf=		iavf
@@ -913,12 +926,10 @@ _ffec=		ffec
 .endif
 
 .if ${MACHINE_ARCH:Mpowerpc64*} != ""
-_ixl=		ixl
 _nvram=		opal_nvram
 .endif
 
-.if ${MACHINE_CPUARCH} == "powerpc" && ${MACHINE_ARCH} != "powerpcspe"
-# Don't build powermac_nvram for powerpcspe, it's never supported.
+.if ${MACHINE_CPUARCH} == "powerpc"
 _nvram+=	powermac_nvram
 .endif
 

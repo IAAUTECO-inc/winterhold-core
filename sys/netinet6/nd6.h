@@ -98,8 +98,7 @@ struct nd_ifinfo {
 #endif
 
 #ifdef _KERNEL
-#define ND_IFINFO(ifp) \
-	(((struct in6_ifextra *)if_getafdata(ifp, AF_INET6))->nd_ifinfo)
+#define ND_IFINFO(ifp)	((if_getinet6(ifp))->nd_ifinfo)
 #define IN6_LINKMTU(ifp) \
 	((ND_IFINFO(ifp)->linkmtu && ND_IFINFO(ifp)->linkmtu < (ifp)->if_mtu) \
 	    ? ND_IFINFO(ifp)->linkmtu \
@@ -139,23 +138,6 @@ struct in6_prefix {
 	u_short advrtrs; /* number of advertisement routers */
 	/* struct sockaddr_in6 advrtr[] */
 };
-
-#ifdef _KERNEL
-struct	in6_ondireq {
-	char ifname[IFNAMSIZ];
-	struct {
-		u_int32_t linkmtu;	/* LinkMTU */
-		u_int32_t maxmtu;	/* Upper bound of LinkMTU */
-		u_int32_t basereachable; /* BaseReachableTime */
-		u_int32_t reachable;	/* Reachable Time */
-		u_int32_t retrans;	/* Retrans Timer */
-		u_int32_t flags;	/* Flags */
-		int recalctm;		/* BaseReacable re-calculation timer */
-		u_int8_t chlim;		/* CurHopLimit */
-		u_int8_t receivedra;
-	} ndi;
-};
-#endif
 
 struct	in6_ndireq {
 	char ifname[IFNAMSIZ];

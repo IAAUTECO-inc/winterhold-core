@@ -210,6 +210,8 @@ ipfw_free_rule(struct ip_fw *rule)
 	 */
 	if (rule->refcnt > 1)
 		return;
+	if (ACTION_PTR(rule)->opcode == O_LOG)
+		ipfw_tap_free(rule->rulenum);
 	uma_zfree_pcpu(V_ipfw_cntr_zone, rule->cntr);
 	free(rule, M_IPFW);
 }
@@ -566,12 +568,11 @@ ipfw_commit_rules(struct ip_fw_chain *chain, struct rule_check_info *rci,
 }
 
 int
-ipfw_add_protected_rule(struct ip_fw_chain *chain, struct ip_fw *rule,
-    int locked)
+ipfw_add_protected_rule(struct ip_fw_chain *chain, struct ip_fw *rule)
 {
 	struct ip_fw **map;
 
-	map = get_map(chain, 1, locked);
+	map = get_map(chain, 1, 0);
 	if (map == NULL)
 		return (ENOMEM);
 	if (chain->n_rules > 0)
@@ -2034,7 +2035,7 @@ ipfw_check_object_name_generic(const char *name)
  *
  * Return 0 on success.
  */
-int
+static int
 create_objects_compat(struct ip_fw_chain *ch, ipfw_insn *cmd,
     struct obj_idx *oib, struct obj_idx *pidx, struct tid_info *ti)
 {
@@ -2511,6 +2512,9 @@ import_rule_v1(struct ip_fw_chain *chain, struct rule_check_info *ci)
 
 	/* Copy opcodes */
 	memcpy(krule->cmd, urule->cmd, krule->cmd_len * sizeof(uint32_t));
+
+	if (ACTION_PTR(krule)->opcode == O_LOG)
+		ipfw_tap_alloc(krule->rulenum);
 }
 
 /*
