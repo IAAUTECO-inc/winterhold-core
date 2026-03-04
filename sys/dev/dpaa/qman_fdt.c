@@ -56,7 +56,7 @@ static device_method_t qman_methods[] = {
 	DEVMETHOD(device_resume,	qman_resume),
 	DEVMETHOD(device_shutdown,	qman_shutdown),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t qman_driver = {
@@ -93,7 +93,7 @@ static device_method_t qm_portals_methods[] = {
 	DEVMETHOD(device_attach,	qman_portals_fdt_attach),
 	DEVMETHOD(device_detach,	qman_portals_detach),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t qm_portals_driver = {
@@ -134,25 +134,6 @@ qman_portals_fdt_probe(device_t dev)
 	device_set_desc(dev, QMAN_PORT_DEVSTR);
 
 	return (BUS_PROBE_DEFAULT);
-}
-
-static phandle_t
-qman_portal_find_cpu(int cpu)
-{
-	phandle_t node;
-	pcell_t reg;
-
-	node = OF_finddevice("/cpus");
-	if (node == -1)
-		return (-1);
-
-	for (node = OF_child(node); node != 0; node = OF_peer(node)) {
-		if (OF_getprop(node, "reg", &reg, sizeof(reg)) <= 0)
-			continue;
-		if (reg == cpu)
-			return (node);
-	}
-	return (-1);
 }
 
 static int
@@ -213,18 +194,15 @@ qman_portals_fdt_attach(device_t dev)
 		}
 		/* Checkout related cpu */
 		if (OF_getprop(child, "cpu-handle", (void *)&cpu,
-		    sizeof(cpu)) <= 0) {
-			cpu = qman_portal_find_cpu(cpus);
-			if (cpu <= 0)
-				continue;
-		}
-		/* Acquire cpu number */
-		cpu_node = OF_instance_to_package(cpu);
-		if (OF_getencprop(cpu_node, "reg", &cpu_num, sizeof(cpu_num)) <= 0) {
-			device_printf(dev, "Could not retrieve CPU number.\n");
-			return (ENXIO);
-		}
-
+		    sizeof(cpu)) > 0) {
+			cpu_node = OF_instance_to_package(cpu);
+			/* Acquire cpu number */
+			if (OF_getencprop(cpu_node, "reg", &cpu_num, sizeof(cpu_num)) <= 0) {
+				device_printf(dev, "Could not retrieve CPU number.\n");
+				return (ENXIO);
+			}
+		} else
+			cpu_num = cpus;
 		cpus++;
 
 		if (ofw_bus_gen_setup_devinfo(&ofw_di, child) != 0) {

@@ -341,8 +341,11 @@ static struct inpcb *tcp_drop_syn_sent(struct inpcb *, int);
 static char *	tcp_log_addr(struct in_conninfo *inc, struct tcphdr *th,
 		    const void *ip4hdr, const void *ip6hdr);
 static void	tcp_default_switch_failed(struct tcpcb *tp);
+
+#ifdef INET
 static ipproto_ctlinput_t	tcp_ctlinput;
 static udp_tun_icmp_t		tcp_ctlinput_viaudp;
+#endif
 
 static struct tcp_function_block tcp_def_funcblk = {
 	.tfb_tcp_block_name = "freebsd",
@@ -575,20 +578,21 @@ tcp_recv_udp_tunneled_packet(struct mbuf *m, int off, struct inpcb *inp,
 #endif
 	struct udphdr *uh;
 	struct tcphdr *th;
-	int thlen;
+	int len, thlen;
 	uint16_t port;
 
 	TCPSTAT_INC(tcps_tunneled_pkts);
 	if ((m->m_flags & M_PKTHDR) == 0) {
 		/* Can't handle one that is not a pkt hdr */
 		TCPSTAT_INC(tcps_tunneled_errs);
-		goto out;
+		m_freem(m);
+		return (true);
 	}
 	thlen = sizeof(struct tcphdr);
 	if (m->m_len < off + sizeof(struct udphdr) + thlen &&
 	    (m =  m_pullup(m, off + sizeof(struct udphdr) + thlen)) == NULL) {
 		TCPSTAT_INC(tcps_tunneled_errs);
-		goto out;
+		return (true);
 	}
 	iph = mtod(m, struct ip *);
 	uh = (struct udphdr *)((caddr_t)iph + off);
@@ -598,7 +602,7 @@ tcp_recv_udp_tunneled_packet(struct mbuf *m, int off, struct inpcb *inp,
 		m =  m_pullup(m, off + sizeof(struct udphdr) + thlen);
 		if (m == NULL) {
 			TCPSTAT_INC(tcps_tunneled_errs);
-			goto out;
+			return (true);
 		} else {
 			iph = mtod(m, struct ip *);
 			uh = (struct udphdr *)((caddr_t)iph + off);
@@ -619,25 +623,36 @@ tcp_recv_udp_tunneled_packet(struct mbuf *m, int off, struct inpcb *inp,
 	switch (iph->ip_v) {
 #ifdef INET
 	case IPVERSION:
-		iph->ip_len = htons(ntohs(iph->ip_len) - sizeof(struct udphdr));
-		tcp_input_with_port(&m, &off, IPPROTO_TCP, port);
+		len = ntohs(iph->ip_len) - sizeof(struct udphdr);
+		if (__predict_false(len != m->m_pkthdr.len)) {
+			TCPSTAT_INC(tcps_tunneled_errs);
+			m_freem(m);
+			return (true);
+		} else {
+			iph->ip_len = htons(len);
+			tcp_input_with_port(&m, &off, IPPROTO_TCP, port);
+		}
 		break;
 #endif
 #ifdef INET6
 	case IPV6_VERSION >> 4:
 		ip6 = mtod(m, struct ip6_hdr *);
-		ip6->ip6_plen = htons(ntohs(ip6->ip6_plen) - sizeof(struct udphdr));
-		tcp6_input_with_port(&m, &off, IPPROTO_TCP, port);
+		len = ntohs(ip6->ip6_plen) - sizeof(struct udphdr);
+		if (__predict_false(len + sizeof(struct ip6_hdr) !=
+		    m->m_pkthdr.len)) {
+			TCPSTAT_INC(tcps_tunneled_errs);
+			m_freem(m);
+			return (true);
+		} else {
+			ip6->ip6_plen = htons(len);
+			tcp6_input_with_port(&m, &off, IPPROTO_TCP, port);
+		}
 		break;
 #endif
 	default:
-		goto out;
+		m_freem(m);
 		break;
 	}
-	return (true);
-out:
-	m_freem(m);
-
 	return (true);
 }
 

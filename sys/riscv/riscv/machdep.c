@@ -118,7 +118,7 @@ uint32_t boot_hart = BOOT_HART_INVALID;	/* The hart we booted on. */
 
 cpuset_t all_harts;
 
-extern int *end;
+extern char end[];
 
 static char static_kenv[PAGE_SIZE];
 
@@ -623,6 +623,10 @@ initriscv(struct riscv_bootparams *rvbp)
 	 * Identify CPU/ISA features.
 	 */
 	identify_cpu(0);
+
+	sched_instance_select();
+
+	link_elf_ireloc();
 
 	/* Do basic tuning, hz etc */
 	init_param1();

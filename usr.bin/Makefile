@@ -24,6 +24,7 @@ SUBDIR=	apply \
 	comm \
 	command \
 	compress \
+	cpio \
 	csplit \
 	ctlstat \
 	cut \
@@ -185,7 +186,6 @@ SUBDIR=	apply \
 SUBDIR.${MK_ACCT}+=	lastcomm
 SUBDIR.${MK_AT}+=	at
 SUBDIR.${MK_BLUETOOTH}+=	bluetooth
-SUBDIR.${MK_BSD_CPIO}+=	cpio
 SUBDIR.${MK_CALENDAR}+=	calendar
 .if ${MK_CLANG} != "no" || ${MK_LLVM_BINUTILS} != "no" || \
     ${MK_LLD} != "no" || ${MK_LLDB} != "no"
@@ -206,9 +206,7 @@ SUBDIR.${MK_GAMES}+=	pom
 SUBDIR.${MK_GAMES}+=	primes
 SUBDIR.${MK_GAMES}+=	random
 SUBDIR+=		gh-bc
-.if ${MK_GNU_DIFF} == "no"
 SUBDIR+=		diff3
-.endif
 SUBDIR.${MK_HESIOD}+=	hesinfo
 SUBDIR.${MK_ICONV}+=	iconv
 SUBDIR.${MK_ICONV}+=	mkcsmapper

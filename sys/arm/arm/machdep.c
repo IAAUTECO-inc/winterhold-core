@@ -120,8 +120,6 @@ vm_offset_t vector_page;
 /* The address at which the kernel was loaded.  Set early in initarm(). */
 vm_paddr_t arm_physmem_kernaddr;
 
-extern int *end;
-
 #ifdef FDT
 vm_paddr_t pmap_pa;
 vm_offset_t systempage;
@@ -374,7 +372,7 @@ pcpu0_init(void)
 /*
  * Initialize proc0
  */
-void
+static void
 init_proc0(vm_offset_t kstack)
 {
 	proc_linkup0(&proc0, &thread0);
@@ -447,6 +445,8 @@ initarm(struct arm_boot_params *abp)
 
 	set_cpufuncs();
 	cpuinfo_init();
+	sched_instance_select();
+	link_elf_ireloc();
 
 	/*
 	 * Find the dtb passed in by the boot loader.
@@ -653,7 +653,7 @@ initarm(struct arm_boot_params *abp)
 	}
 #endif
 
-	return ((void *)STACKALIGN(thread0.td_pcb));
+	return (STACKALIGN(thread0.td_pcb));
 
 }
 #endif /* FDT */

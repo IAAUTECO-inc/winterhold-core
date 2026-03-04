@@ -214,7 +214,6 @@ SUBDIR=	\
 	khelp \
 	krpc \
 	ksyms \
-	le \
 	lge \
 	libalias \
 	libiconv \
@@ -357,7 +356,7 @@ SUBDIR=	\
 	${_rtw89} \
 	rtwn \
 	rtwn_pci \
-	rtwn_usb \
+	${_rtwn_usb} \
 	${_rtwnfw} \
 	${_s3} \
 	${_safe} \
@@ -412,7 +411,7 @@ SUBDIR=	\
 	${_ufshci} \
 	uinput \
 	unionfs \
-	usb \
+	${_usb} \
 	${_vesa} \
 	${_vf_i2c} \
 	virtio \
@@ -711,6 +710,14 @@ SUBDIR+=	ktest
 SUBDIR+=	tests
 .endif
 
+.if ${MK_USB} != "no" || defined(ALL_MODULES)
+_rtwn_usb=	rtwn_usb
+_usb=		usb
+. if ${MACHINE_CPUARCH} == "amd64"
+_thunderbolt=	thunderbolt
+. endif
+.endif
+
 .if ${MK_ZFS} != "no" || defined(ALL_MODULES)
 SUBDIR+=	zfs
 .endif
@@ -939,10 +946,6 @@ _bcm283x_pwm=	bcm283x_pwm
 _neta=		neta
 .endif
 
-.if ${MACHINE_CPUARCH} == "amd64"
-_thunderbolt=	thunderbolt
-.endif
-
 .if !(${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} < 110000)
 # LLVM 10 crashes when building if_malo_pci.c, fixed in LLVM11:
 # https://bugs.llvm.org/show_bug.cgi?id=44351
@@ -967,7 +970,7 @@ SUBDIR:= ${SUBDIR:N${reject}}
 afterinstall: .PHONY
 	${KLDXREF_CMD} ${DESTDIR}${KMODDIR}
 .if defined(NO_ROOT) && defined(METALOG)
-	echo ".${DISTBASE}${KMODDIR}/linker.hints type=file mode=0644 uname=root gname=wheel" | \
+	echo ".${DISTBASE}${KMODDIR}/linker.hints type=file uname=root gname=wheel mode=0644" | \
 	    cat -l >> ${METALOG}
 .endif
 .endif

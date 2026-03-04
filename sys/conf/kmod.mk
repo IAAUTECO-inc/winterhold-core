@@ -103,9 +103,13 @@ LINUXKPI_GENSRCS+= \
 	pci_iov_if.h \
 	pcib_if.h \
 	vnode_if.h \
-	usb_if.h \
-	opt_usb.h \
 	opt_stack.h
+
+.if ${MK_USB} != "no"
+LINUXKPI_GENSRCS+= \
+	usb_if.h \
+	opt_usb.h
+.endif
 
 LINUXKPI_INCLUDES+= \
 	-I${SYSDIR}/compat/linuxkpi/common/include \
@@ -383,7 +387,7 @@ afterinstall: _kldxref
 _kldxref: .PHONY
 	${KLDXREF_CMD} ${DESTDIR}${KMODDIR}
 .if defined(NO_ROOT) && defined(METALOG)
-	echo ".${DISTBASE}${KMODDIR}/linker.hints type=file mode=0644 uname=root gname=wheel" | \
+	echo ".${DISTBASE}${KMODDIR}/linker.hints type=file uname=root gname=wheel mode=0644" | \
 	    cat -l >> ${METALOG}
 .endif
 .endif
