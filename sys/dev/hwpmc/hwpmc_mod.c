@@ -818,11 +818,9 @@ pmc_force_context_switch(void)
 uint64_t
 pmc_rdtsc(void)
 {
-#if defined(__i386__) || defined(__amd64__)
-	if (__predict_true(amd_feature & AMDID_RDTSCP))
-		return (rdtscp());
-	else
-		return (rdtsc());
+#if defined(__i386__)
+	/* Unfortunately get_cyclecount on i386 uses cpu_ticks. */
+	return (rdtsc());
 #else
 	return (get_cyclecount());
 #endif
@@ -4538,6 +4536,51 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 	}
 	break;
 
+	/*
+	 * Get the PMC capabilities
+	 */
+
+	case PMC_OP_GETCAPS:
+	{
+		struct pmc_op_caps c;
+		struct pmc *pm;
+		struct pmc_classdep *pcd;
+		pmc_id_t pmcid;
+		int adjri, ri;
+
+		PMC_DOWNGRADE_SX();
+
+		if ((error = copyin(arg, &c, sizeof(c))) != 0)
+			break;
+
+		pmcid = c.pm_pmcid;
+
+		if ((error = pmc_find_pmc(pmcid, &pm)) != 0)
+			break;
+
+		KASSERT(pmcid == pm->pm_id,
+		    ("[pmc,%d] pmc id %x != pmcid %x", __LINE__,
+			pm->pm_id, pmcid));
+
+		ri = PMC_TO_ROWINDEX(pm);
+		pcd = pmc_ri_to_classdep(md, ri, &adjri);
+
+		/*
+		 * If PMC class has no GETCAPS return the class capabilities
+		 * otherwise get the per counter capabilities.
+		 */
+		if (pcd->pcd_get_caps == NULL) {
+			c.pm_caps = pcd->pcd_caps;
+		} else {
+			error = (*pcd->pcd_get_caps)(adjri, &c.pm_caps);
+			if (error < 0)
+				break;
+		}
+
+		if ((error = copyout(&c, arg, sizeof(c))) < 0)
+			break;
+	}
+	break;
 
 	default:
 		error = EINVAL;
